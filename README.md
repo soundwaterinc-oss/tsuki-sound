@@ -40,7 +40,8 @@ breath LFO ─→ masterGain & LPF（全層を満ち引き）
 - **SOURCE** — tissue mode / N / relax k / anisotropy / seed（↻で組織再生成）
 - **MAPPING WEIGHTS** — area / centroidX / centroidY / sides / neighbors
 - **LUNAR** — breath rate・depth / tide rate / lunar phase / spiral rate・dir
-- **SYNTH** — MACRO/MID/MICRO トグル・macro voice・ADSR
+- **SYNTH** — MACRO/MID/MICRO 各層の音色を任意選択・ADSR
+- **TIMBRE もつれ** — detune（散らし）/ shimmer（ゆらぎ）/ brightness（倍音）
 - **SCALE / TEMPO** — 純正律・倍音列・ペンタ・ペロッグ・都節・微分音 / root / 56–66BPM
 - **FX** — reverb・delay・master
 - **MIDI OUT** — 出力選択・channel（breath→CC1/CC11、和音→複数noteon）
@@ -59,7 +60,10 @@ src/
     spiral.js          螺旋/距離帯スキャン順
     scales.js          純正律・倍音列・量子化・和音
     midi.js            Web MIDI 出力
-    voices/            granular / additive / glass / softbell / air / micro
+    voices/
+      sines.js         weave(もつれサイン) / choir / pad / glass / drone / bowed / dew / bloom
+      granular.js      サイングレイン雲
+      _env.js          raised-cosine なめらかエンベロープ
   geometry/
     tissue.js          Voronoi組織（3モード）
     lloyd.js           重心ロイド緩和 + seed PRNG

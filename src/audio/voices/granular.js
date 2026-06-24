@@ -4,13 +4,14 @@ import { hannGain } from './_env.js'
 export function granularVoice(engine, p) {
   const { ctx, busIn } = engine
   const src = p.srcBuffer || engine.sineBuffer
+  const amp = p.amp * 0.75
   const out = ctx.createGain()
-  out.gain.value = p.amp
+  out.gain.value = amp
   const pan = ctx.createStereoPanner(); pan.pan.value = p.pan || 0
   out.connect(pan); pan.connect(busIn)
 
   const t0 = p.t0
-  const density = 28 + (p.spread || 0.1) * 120 // grains/sec
+  const density = 26 + (p.spread || 0.1) * 90 // grains/sec
   const spread = p.spread ?? 0.12
   // 基準playbackRate: 220Hz バッファを目標freqへ
   const baseRate = p.freq / 220
@@ -20,8 +21,8 @@ export function granularVoice(engine, p) {
     g.buffer = src
     g.playbackRate.value = baseRate * (1 + (Math.random() - 0.5) * spread)
     const env = ctx.createGain()
-    const grainLen = 0.02 + Math.random() * 0.18
-    hannGain(env.gain, t, grainLen, 0.9)
+    const grainLen = 0.03 + Math.random() * 0.2
+    hannGain(env.gain, t, grainLen, 0.7)
     const gp = ctx.createStereoPanner()
     gp.pan.value = (Math.random() - 0.5) * spread * 2
     g.connect(env).connect(gp).connect(out)
@@ -29,9 +30,10 @@ export function granularVoice(engine, p) {
     g.start(t + Math.random() * 0.01, off, grainLen + 0.02)
     g.stop(t + grainLen + 0.05)
   }
-  // 全体フェードで雲の縁を柔らかく
-  out.gain.setValueAtTime(0, t0)
-  out.gain.linearRampToValueAtTime(p.amp, t0 + Math.min(p.attack, p.dur * 0.5))
-  out.gain.setValueAtTime(p.amp, t0 + p.dur)
-  out.gain.linearRampToValueAtTime(0, t0 + p.dur + p.release)
+  // 全体フェードで雲の縁を柔らかく(急出ししない)
+  const atk = Math.max(0.4, p.attack)
+  out.gain.setValueAtTime(0.0001, t0)
+  out.gain.linearRampToValueAtTime(amp, t0 + atk)
+  out.gain.setValueAtTime(amp, t0 + atk + p.dur)
+  out.gain.linearRampToValueAtTime(0.0001, t0 + atk + p.dur + p.release)
 }

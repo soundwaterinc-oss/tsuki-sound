@@ -1,6 +1,7 @@
 // コントロールパネル — SOURCE / MAPPING / LUNAR / SYNTH / SCALE / TEMPO / FX / MIDI
 import { state, setState, setPath } from '../state.js'
 import { theme } from './theme.js'
+import { VOICE_OPTIONS } from '../audio/voices/index.js'
 
 export function createControls(handlers) {
   const panel = document.createElement('div')
@@ -133,11 +134,18 @@ export function createControls(handlers) {
   slider('spiral rate', 'spiralRate', 1, 14, 0.5)
   select('spiral dir', 'spiralDir', ['out', 'in'])
 
-  h('SYNTH')
+  h('SYNTH 層')
   toggleBtn('MACRO', 'layers.macro'); toggleBtn('MID', 'layers.mid'); toggleBtn('MICRO', 'layers.micro')
-  select('macro voice', 'voiceMacro', ['granular', 'additive', 'glass'])
-  slider('attack (s)', 'attack', 0.1, 3, 0.1)
-  slider('release (s)', 'release', 0.5, 6, 0.1)
+  select('MACRO voice', 'voiceMacro', VOICE_OPTIONS.macro)
+  select('MID voice', 'voiceMid', VOICE_OPTIONS.mid)
+  select('MICRO voice', 'voiceMicro', VOICE_OPTIONS.micro)
+  slider('attack (s)', 'attack', 0.2, 4, 0.1)
+  slider('release (s)', 'release', 0.5, 7, 0.1)
+
+  h('TIMBRE もつれ')
+  slider('detune (散らし)', 'detune', 0, 1, 0.01)
+  slider('shimmer (ゆらぎ)', 'shimmer', 0, 1, 0.01)
+  slider('brightness (倍音)', 'brightness', 0, 1, 0.01)
 
   h('SCALE / TEMPO')
   select('scale', 'scale', ['just', 'overtone', 'pentatonic', 'pelog', 'japanese', 'micro'])

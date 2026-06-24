@@ -9,18 +9,19 @@ export function createEngine(st) {
   const busIn = ctx.createGain()
   const dry = ctx.createGain(); dry.gain.value = 1
 
-  // soft saturation で正弦群に温度を
+  // soft saturation で正弦群にわずかな温度を(控えめ)
   const shaper = ctx.createWaveShaper()
-  shaper.curve = makeSatCurve(0.35)
+  shaper.curve = makeSatCurve(0.18)
   shaper.oversample = '2x'
 
   const breathGain = ctx.createGain(); breathGain.gain.value = 0.9  // breath が乗る
   const lpf = ctx.createBiquadFilter()
   lpf.type = 'lowpass'; lpf.frequency.value = 4200; lpf.Q.value = 0.3
 
+  // やわらかいグルー(急なポンピングを避ける)
   const limiter = ctx.createDynamicsCompressor()
-  limiter.threshold.value = -8; limiter.knee.value = 6
-  limiter.ratio.value = 12; limiter.attack.value = 0.004; limiter.release.value = 0.25
+  limiter.threshold.value = -6; limiter.knee.value = 18
+  limiter.ratio.value = 4; limiter.attack.value = 0.05; limiter.release.value = 0.5
 
   const master = ctx.createGain(); master.gain.value = st.masterGain
 

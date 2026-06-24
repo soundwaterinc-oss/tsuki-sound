@@ -28,9 +28,16 @@ export const state = {
 
   // SYNTH layers
   layers: { macro: true, mid: true, micro: true },
-  voiceMacro: 'granular',  // granular | additive | glass
-  attack: 1.2,             // s
-  release: 4.0,            // s
+  voiceMacro: 'weave',     // weave | granular | choir | glass | drone
+  voiceMid: 'pad',         // pad | weave | bowed | glass | choir
+  voiceMicro: 'dew',       // dew | bloom | weave
+  attack: 1.4,             // s (やわらかい立ち上がり)
+  release: 4.5,            // s
+
+  // TIMBRE — 全声部に効くサインの絡み具合
+  detune: 0.5,             // 0..1 ユニゾンの散らし幅(cent)
+  shimmer: 0.4,            // 0..1 振幅ゆらぎ(もつれ)の深さ
+  brightness: 0.5,         // 0..1 倍音/声部数
 
   // SCALE / TEMPO
   scale: 'just',           // just | overtone | pentatonic | pelog | japanese | micro
