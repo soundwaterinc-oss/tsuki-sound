@@ -18,6 +18,10 @@ export function createEngine(st) {
   const lpf = ctx.createBiquadFilter()
   lpf.type = 'lowpass'; lpf.frequency.value = 4200; lpf.Q.value = 0.3
 
+  // 低域のこもり/濁りを除く master highpass(大きく響かせても綺麗に)
+  const hpf = ctx.createBiquadFilter()
+  hpf.type = 'highpass'; hpf.frequency.value = 56; hpf.Q.value = 0.5
+
   // やわらかいグルー(急なポンピングを避ける)
   const limiter = ctx.createDynamicsCompressor()
   limiter.threshold.value = -6; limiter.knee.value = 18
@@ -52,7 +56,8 @@ export function createEngine(st) {
 
   shaper.connect(breathGain)
   breathGain.connect(lpf)
-  lpf.connect(limiter)
+  lpf.connect(hpf)
+  hpf.connect(limiter)
   limiter.connect(master)
   master.connect(ctx.destination)
 
@@ -84,18 +89,24 @@ function makeSatCurve(amount) {
   return c
 }
 
-// 指数減衰のステレオIR (大空間リバーブ)
+// なめらかなステレオIR (大空間リバーブ)。
+// 生ホワイトノイズは粒立って汚いので one-pole LPF で平滑化し、
+// 指数減衰＋やわらかい入りで「大きく響かせても綺麗な」テールにする。
 function makeImpulse(ctx, seconds, decay) {
   const rate = ctx.sampleRate
   const len = Math.floor(rate * seconds)
   const buf = ctx.createBuffer(2, len, rate)
+  const fadeIn = rate * 0.02 // 20ms フェードイン(初期のガリつき除去)
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch)
+    let lp = 0
+    const a = 0.12 // 平滑係数(小さいほど暗く綺麗)
     for (let i = 0; i < len; i++) {
       const t = i / len
-      // 初期の薄い拡散 + 滑らかなテール
-      const env = Math.pow(1 - t, decay)
-      d[i] = (Math.random() * 2 - 1) * env * (0.4 + 0.6 * Math.pow(1 - t, 0.5))
+      const white = Math.random() * 2 - 1
+      lp = lp + a * (white - lp)                 // one-pole lowpass
+      const env = Math.exp(-decay * t) * Math.min(1, i / fadeIn)
+      d[i] = lp * env * 3.4
     }
   }
   return buf

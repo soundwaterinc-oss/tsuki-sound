@@ -21,7 +21,8 @@ export function mapCell(cell, st) {
 
   const dur = lerp(0.6, 4.5, f.area)                  // 大セルほど長い
   const partials = Math.floor(lerp(4, 16, f.sides))   // 辺数→倍音声部
-  const amp = lerp(0.18, 0.85, f.area)
+  // 大セルが大音量で濁らないよう上限を抑える
+  const amp = lerp(0.18, 0.62, f.area)
   const pan = (f.centroidX - 0.5) * 2
   const reverbSend = f.perimeter
   const spread = lerp(0.04, 0.2, f.neighbors)

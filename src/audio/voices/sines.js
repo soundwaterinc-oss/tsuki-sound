@@ -51,12 +51,13 @@ export function weaveVoice(engine, p) {
   const { ctx, out } = head(engine, p)
   const bright = p.bright ?? 0.5
   const N = 3 + Math.round(bright * 3)            // 3〜6本
-  const cents = (p.detune ?? 0.5) * 28            // 散らし幅
+  // 散らしは控えめに(広いと大きく響かせた時うなりが濁る)
+  const cents = (p.detune ?? 0.5) * 11            // 散らし幅
   const life = p.attack + p.dur + p.release + 0.2
   for (let i = 0; i < N; i++) {
     const d = (N === 1 ? 0 : (i / (N - 1) - 0.5) * 2) * cents
     sine(ctx, out, p.freq, p.t0, life, {
-      gain: 1 / N, detuneCents: d, shimmer: p.shimmer ?? 0.4, drift: 2 + cents * 0.1, idx: i,
+      gain: 1 / N, detuneCents: d, shimmer: p.shimmer ?? 0.4, drift: 1 + cents * 0.06, idx: i,
     })
   }
   softEnv(out.gain, p.t0, { amp: p.amp, attack: p.attack, hold: p.dur, release: p.release })
@@ -102,7 +103,7 @@ export function glassVoice(engine, p) {
 export function droneVoice(engine, p) {
   const { ctx, out } = head(engine, p)
   const life = p.attack + p.dur + p.release + 0.5
-  const cents = (p.detune ?? 0.5) * 18
+  const cents = (p.detune ?? 0.5) * 10
   const layers = [
     { f: p.freq * 0.5, g: 0.7 }, { f: p.freq, g: 0.6 }, { f: p.freq * 1.5, g: 0.35 },
   ]
