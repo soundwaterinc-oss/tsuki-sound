@@ -32,6 +32,7 @@ export function createScheduler(engine, st, tide, midi, hooks = {}) {
     const cell = order[idx % order.length]
     idx++
     const m = mapCell(cell, st)
+    if (!m) return // 白玉(大セル)は鳴らさない
     // 潮汐ゲート: 密度に応じて発音確率
     if (rng() < tide.density(t) * 0.92 + 0.04) {
       triggerVoice(engine, st, m, t)

@@ -61,20 +61,30 @@ export function createEngine(st) {
   limiter.connect(master)
   master.connect(ctx.destination)
 
-  // shared 正弦バッファ (granular ソース)
+  // shared バッファ
   const sineBuffer = makeSineBuffer(ctx, 1.0, 220)
-  const fieldBuffer = makeNoiseBuffer(ctx, 2.0) // air / breath tick 用
+  const fieldBuffer = makeNoiseBuffer(ctx, 2.0)        // pink寄り
+  const whiteBuffer = makeWhiteBuffer(ctx, 2.5)        // 粒子/息(バンドパス源)
 
   const engine = {
     ctx, busIn, breathGain, lpf, master,
     reverbReturn, delaySend, dL, dR, fb,
-    sineBuffer, fieldBuffer,
+    sineBuffer, fieldBuffer, whiteBuffer,
     setReverbWet: v => reverbReturn.gain.value = v,
     setDelay: (wet, feed) => { delaySend.gain.value = wet; fb.gain.value = feed },
     setMaster: v => master.gain.setTargetAtTime(v, ctx.currentTime, 0.05),
     setTempo: bpm => { const d = beatDelay(bpm); dL.delayTime.value = d; dR.delayTime.value = d * 1.5 },
   }
   return engine
+}
+
+function makeWhiteBuffer(ctx, seconds) {
+  const rate = ctx.sampleRate
+  const len = Math.floor(rate * seconds)
+  const buf = ctx.createBuffer(1, len, rate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * 0.7
+  return buf
 }
 
 function beatDelay(bpm) { return Math.min(1.8, (60 / bpm) * 0.75) } // 付点八分風

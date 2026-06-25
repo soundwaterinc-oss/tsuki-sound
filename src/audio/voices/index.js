@@ -4,11 +4,18 @@ import {
   weaveVoice, choirVoice, padVoice, glassVoice, droneVoice, bowedVoice,
   dewVoice, bloomVoice,
 } from './sines.js'
+import {
+  particleVoice, airtoneVoice, organVoice, reedVoice,
+} from './organic.js'
 
 // 名前 → 関数。UIの選択肢と一致させる。
 export const VOICES = {
-  granular: granularVoice,
   weave: weaveVoice,
+  granular: granularVoice,
+  particle: particleVoice,
+  airtone: airtoneVoice,
+  organ: organVoice,
+  reed: reedVoice,
   choir: choirVoice,
   pad: padVoice,
   glass: glassVoice,
@@ -20,9 +27,9 @@ export const VOICES = {
 
 // 各層で選べる声部(UI用)
 export const VOICE_OPTIONS = {
-  macro: ['weave', 'granular', 'choir', 'glass', 'drone'],
-  mid:   ['pad', 'weave', 'bowed', 'glass', 'choir'],
-  micro: ['dew', 'bloom', 'weave'],
+  macro: ['weave', 'granular', 'particle', 'airtone', 'organ', 'choir', 'glass', 'drone'],
+  mid:   ['pad', 'weave', 'organ', 'reed', 'airtone', 'bowed', 'glass', 'choir'],
+  micro: ['dew', 'bloom', 'particle', 'weave'],
 }
 
 export function triggerVoice(engine, st, m, t0) {
@@ -31,7 +38,7 @@ export function triggerVoice(engine, st, m, t0) {
     partials: m.partials, spread: m.spread, reverbSend: m.reverbSend,
     attack: st.attack, release: st.release, t0,
     // グローバル音色シェイプ
-    detune: st.detune, shimmer: st.shimmer, bright: st.brightness,
+    detune: st.detune, shimmer: st.shimmer, bright: st.brightness, texture: st.texture,
   }
 
   if (m.layer === 'macro' && st.layers.macro) {

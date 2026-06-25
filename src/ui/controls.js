@@ -120,6 +120,7 @@ export function createControls(handlers) {
   panel.appendChild(regen)
 
   h('MAPPING WEIGHTS')
+  slider('白玉カット (大セル消音)', 'sizeCut', 0.3, 1, 0.01)
   slider('area', 'weights.area', 0, 1, 0.01)
   slider('centroidX', 'weights.centroidX', 0, 1, 0.01)
   slider('centroidY', 'weights.centroidY', 0, 1, 0.01)
@@ -146,6 +147,7 @@ export function createControls(handlers) {
   slider('detune (散らし)', 'detune', 0, 1, 0.01)
   slider('shimmer (ゆらぎ)', 'shimmer', 0, 1, 0.01)
   slider('brightness (倍音)', 'brightness', 0, 1, 0.01)
+  slider('texture (粒子/息)', 'texture', 0, 1, 0.01)
 
   h('SCALE / TEMPO')
   select('scale', 'scale', ['just', 'overtone', 'pentatonic', 'pelog', 'japanese', 'micro'])

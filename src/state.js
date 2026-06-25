@@ -9,6 +9,9 @@ export const state = {
   anisotropy: 1.6,         // 1.0..3.0 (epidermis 伸長率)
   seed: 7,
 
+  // 白玉カット: この正規化面積以上の大セルは鳴らさない(小さいほど大セルを多く消す)
+  sizeCut: 0.62,
+
   // MAPPING WEIGHTS (合計 ≈ 1.0)
   weights: {
     area: 0.30,
@@ -38,6 +41,7 @@ export const state = {
   detune: 0.5,             // 0..1 ユニゾンの散らし幅(cent)
   shimmer: 0.4,            // 0..1 振幅ゆらぎ(もつれ)の深さ
   brightness: 0.5,         // 0..1 倍音/声部数
+  texture: 0.35,           // 0..1 粒子/息(ノイズ⇄サインの中間度)
 
   // SCALE / TEMPO
   scale: 'just',           // just | overtone | pentatonic | pelog | japanese | micro

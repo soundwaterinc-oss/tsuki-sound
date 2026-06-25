@@ -2,8 +2,8 @@
 // 「もつれ合うサイン波」を中核に据えた、なめらかで温かい声部群。
 import { softEnv } from './_env.js'
 
-// --- 内部ヘルパ: 1本の正弦 + 任意の振幅ゆらぎ(shimmer) + 微小detune drift ---
-function sine(ctx, dest, freq, t, life, { gain = 1, detuneCents = 0, shimmer = 0, drift = 0, idx = 0 }) {
+// --- 共通ヘルパ: 1本の正弦 + 任意の振幅ゆらぎ(shimmer) + 微小detune drift ---
+export function sine(ctx, dest, freq, t, life, { gain = 1, detuneCents = 0, shimmer = 0, drift = 0, idx = 0 }) {
   const osc = ctx.createOscillator()
   osc.type = 'sine'
   osc.frequency.value = freq
@@ -37,7 +37,7 @@ function sine(ctx, dest, freq, t, life, { gain = 1, detuneCents = 0, shimmer = 0
   return osc
 }
 
-function head(engine, p) {
+export function head(engine, p) {
   const { ctx, busIn } = engine
   const out = ctx.createGain(); out.gain.value = 0.00001
   const pan = ctx.createStereoPanner(); pan.pan.value = p.pan || 0

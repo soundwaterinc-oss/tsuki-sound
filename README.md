@@ -41,7 +41,8 @@ breath LFO ─→ masterGain & LPF（全層を満ち引き）
 - **MAPPING WEIGHTS** — area / centroidX / centroidY / sides / neighbors
 - **LUNAR** — breath rate・depth / tide rate / lunar phase / spiral rate・dir
 - **SYNTH** — MACRO/MID/MICRO 各層の音色を任意選択・ADSR
-- **TIMBRE もつれ** — detune（散らし）/ shimmer（ゆらぎ）/ brightness（倍音）
+- **TIMBRE もつれ** — detune（散らし）/ shimmer（ゆらぎ）/ brightness（倍音）/ texture（粒子・息：ノイズ⇄サイン）
+- **白玉カット** — 大セル（白玉）を鳴らさない面積しきい値（MAPPINGセクション）
 - **SCALE / TEMPO** — 純正律・倍音列・ペンタ・ペロッグ・都節・微分音 / root / 56–66BPM
 - **FX** — reverb・delay・master
 - **MIDI OUT** — 出力選択・channel（breath→CC1/CC11、和音→複数noteon）
@@ -62,6 +63,7 @@ src/
     midi.js            Web MIDI 出力
     voices/
       sines.js         weave(もつれサイン) / choir / pad / glass / drone / bowed / dew / bloom
+      organic.js       particle(粒子) / airtone(ノイズ⇄サイン中間) / organ / reed
       granular.js      サイングレイン雲
       _env.js          raised-cosine なめらかエンベロープ
   geometry/
