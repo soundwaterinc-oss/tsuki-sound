@@ -74,6 +74,8 @@ export function createEngine(st) {
     setDelay: (wet, feed) => { delaySend.gain.value = wet; fb.gain.value = feed },
     setMaster: v => master.gain.setTargetAtTime(v, ctx.currentTime, 0.05),
     setTempo: bpm => { const d = beatDelay(bpm); dL.delayTime.value = d; dR.delayTime.value = d * 1.5 },
+    // brightness(0..1) → マスターLPFの基準カットオフ(breath変調はこの上に乗る)
+    setTone: hz => lpf.frequency.setTargetAtTime(hz, ctx.currentTime, 0.05),
   }
   return engine
 }

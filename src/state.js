@@ -34,8 +34,11 @@ export const state = {
   voiceMacro: 'weave',     // weave | granular | choir | glass | drone
   voiceMid: 'pad',         // pad | weave | bowed | glass | choir
   voiceMicro: 'dew',       // dew | bloom | weave
-  attack: 1.4,             // s (やわらかい立ち上がり)
-  release: 4.5,            // s
+  attack: 1.0,             // s (やわらかい立ち上がり)
+  release: 3.2,            // s
+
+  // EVOLVE — 反復を避け、複雑に変わり続ける度合い
+  evolve: 0.5,             // 0..1 (ピッチドリフト/隣接ウォーク/潮汐進行)
 
   // TIMBRE — 全声部に効くサインの絡み具合
   detune: 0.5,             // 0..1 ユニゾンの散らし幅(cent)
@@ -49,7 +52,7 @@ export const state = {
   tempo: 60,               // BPM (56..66)
 
   // FX
-  reverbWet: 0.5,
+  reverbWet: 0.4,
   delayWet: 0.2,
   delayFeed: 0.45,
   masterGain: 0.8,

@@ -38,6 +38,7 @@ function initAudio() {
     onCell: (cell, m) => canvas && canvas.flash(cell, m),
   })
   scheduler.setCells(cells)
+  engine.setTone(brightToHz(state.brightness)) // brightness を即マスター音色へ
   if (canvas) canvas.setBreath(() => breath.phase())
 
   // MIDI 出力一覧
@@ -59,8 +60,12 @@ function onChange(path, v) {
     case 'delayWet': case 'delayFeed': engine.setDelay(state.delayWet, state.delayFeed); break
     case 'masterGain': engine.setMaster(v); break
     case 'tempo': engine.setTempo(v); break
+    case 'brightness': engine.setTone(brightToHz(v)); break
   }
 }
+
+// brightness(0..1) → LPFカットオフ(指数 1.2k〜9kHz)
+function brightToHz(v) { return 1200 * Math.pow(9000 / 1200, Math.max(0, Math.min(1, v))) }
 
 function start() {
   startEl.style.opacity = '0'

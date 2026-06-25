@@ -142,6 +142,7 @@ export function createControls(handlers) {
   select('MICRO voice', 'voiceMicro', VOICE_OPTIONS.micro)
   slider('attack (s)', 'attack', 0.2, 4, 0.1)
   slider('release (s)', 'release', 0.5, 7, 0.1)
+  slider('evolve (変わり続ける)', 'evolve', 0, 1, 0.01)
 
   h('TIMBRE もつれ')
   slider('detune (散らし)', 'detune', 0, 1, 0.01)

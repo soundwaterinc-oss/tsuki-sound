@@ -3,6 +3,23 @@
 import { softEnv } from './_env.js'
 import { sine, head } from './sines.js'
 
+// ============ textureBed: 全声部に texture(粒子/息) を効かせる共通の息成分 ============
+// どの音色を選んでも texture スライダーが必ず効くよう、発音ごとに薄い
+// バンドパスノイズ(音程感あり)を重ねる。weave等の純サインにも息が宿る。
+export function textureBed(engine, p) {
+  const tex = p.texture ?? 0
+  if (tex < 0.03) return
+  const { ctx, whiteBuffer } = engine
+  const { out } = head(engine, p)
+  const src = ctx.createBufferSource(); src.buffer = whiteBuffer; src.loop = true
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'; bp.frequency.value = p.freq * 1.5; bp.Q.value = 7 + (1 - tex) * 10
+  src.connect(bp); bp.connect(out)
+  const life = p.attack + p.dur + p.release + 0.3
+  src.start(p.t0, Math.random()); src.stop(p.t0 + life)
+  softEnv(out.gain, p.t0, { amp: p.amp * tex * 0.55, attack: Math.max(0.4, p.attack), hold: p.dur, release: p.release })
+}
+
 // ============ particle: バンドパスで音程を持たせたノイズ粒の雲 ============
 // Q を texture で変化させ、純音の粒⇄エアリーな砂の質感へモーフ。
 export function particleVoice(engine, p) {

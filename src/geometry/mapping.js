@@ -20,7 +20,9 @@ export function mapCell(cell, st) {
     w.neighbors * f.neighbors +
     w.area * (1 - f.area)
   ) / wsum
-  const target = st.root * Math.pow(2, pitchNorm * 2.2) // 2.2oct, 中域中心
+  // 緩慢なピッチドリフト(scheduler が時間で更新) → 同じセルでも音が変わり続ける
+  const drift = st._pitchShift || 0 // semitones
+  const target = st.root * Math.pow(2, pitchNorm * 2.2 + drift / 12) // 2.2oct, 中域中心
   const freq = quantizeToScale(target, st.root, st.scale)
 
   // サイズ減衰: cut の手前(0.7倍)から 0 へフェード → 白玉に近いほど静かに

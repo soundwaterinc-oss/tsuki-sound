@@ -5,7 +5,7 @@ import {
   dewVoice, bloomVoice,
 } from './sines.js'
 import {
-  particleVoice, airtoneVoice, organVoice, reedVoice,
+  particleVoice, airtoneVoice, organVoice, reedVoice, textureBed,
 } from './organic.js'
 
 // 名前 → 関数。UIの選択肢と一致させる。
@@ -43,12 +43,14 @@ export function triggerVoice(engine, st, m, t0) {
 
   if (m.layer === 'macro' && st.layers.macro) {
     play(engine, st.voiceMacro, base)
+    textureBed(engine, base)            // textureが全声部に効く
     // 和音野: 隣接ハモを weave で薄く絡める
     for (const cf of m.chord) {
       (VOICES.weave)(engine, { ...base, freq: cf, amp: base.amp * 0.35 })
     }
   } else if (m.layer === 'mid' && st.layers.mid) {
     play(engine, st.voiceMid, base)
+    textureBed(engine, base)
   } else if (m.layer === 'micro' && st.layers.micro) {
     play(engine, st.voiceMicro, base)
   }
