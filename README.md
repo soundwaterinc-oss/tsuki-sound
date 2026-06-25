@@ -43,6 +43,8 @@ breath LFO ─→ masterGain & LPF（全層を満ち引き）
 - **SYNTH** — MACRO/MID/MICRO 各層の音色を任意選択・ADSR
 - **TIMBRE もつれ** — detune（散らし）/ shimmer（ゆらぎ）/ brightness（倍音）/ texture（粒子・息：ノイズ⇄サイン）
 - **白玉カット** — 大セル（白玉）を鳴らさない面積しきい値（MAPPINGセクション）
+- **EVOLVE** — 反復を避け複雑に変わり続ける度合い（ピッチドリフト/隣接ウォーク/潮汐進行）
+- **PRESET 設定保存** — 名前付きで保存／読込／削除。最後の設定は自動復元（localStorage）
 - **SCALE / TEMPO** — 純正律・倍音列・ペンタ・ペロッグ・都節・微分音 / root / 56–66BPM
 - **FX** — reverb・delay・master
 - **MIDI OUT** — 出力選択・channel（breath→CC1/CC11、和音→複数noteon）

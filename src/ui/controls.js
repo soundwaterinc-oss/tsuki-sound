@@ -32,6 +32,8 @@ export function createControls(handlers) {
   }
   panel.style.transition = toggle.style.transition = 'all .25s ease'
 
+  const widgets = [] // {path, sync} — プリセット読込後にUIを再同期する
+
   const h = (t) => { const e = document.createElement('div'); e.textContent = t
     Object.assign(e.style, { color: theme.leaf, letterSpacing: '.2em', fontSize: '10px',
       margin: '16px 0 6px', borderBottom: `1px solid ${theme.cellEdge}`, paddingBottom: '4px' })
@@ -56,6 +58,7 @@ export function createControls(handlers) {
       handlers.onChange && handlers.onChange(path, v)
     }
     wrap.append(top, inp); panel.appendChild(wrap)
+    widgets.push({ path, sync: () => { const c = get(path); inp.value = c; val.textContent = fmt(c) } })
     return inp
   }
 
@@ -76,6 +79,7 @@ export function createControls(handlers) {
     sel.value = get(path)
     sel.onchange = () => { setPath(path, sel.value); handlers.onChange && handlers.onChange(path, sel.value) }
     wrap.append(name, sel); panel.appendChild(wrap)
+    if (!path.startsWith('__')) widgets.push({ path, sync: () => { sel.value = get(path) } })
     return sel
   }
 
@@ -89,6 +93,7 @@ export function createControls(handlers) {
     refresh()
     b.onclick = () => { setPath(path, !get(path)); refresh(); handlers.onChange && handlers.onChange(path, get(path)) }
     panel.appendChild(b)
+    widgets.push({ path, sync: refresh })
     return b
   }
 
@@ -104,6 +109,39 @@ export function createControls(handlers) {
   playBtn.textContent = '▶ BREATHE'
   playBtn.onclick = () => handlers.onPlay && handlers.onPlay(playBtn)
   panel.appendChild(playBtn)
+
+  // ---- PRESET 設定保存 ----
+  h('PRESET 設定保存')
+  const presetRow = document.createElement('div')
+  Object.assign(presetRow.style, { display: 'flex', gap: '4px', margin: '4px 0' })
+  const nameInp = document.createElement('input')
+  nameInp.type = 'text'; nameInp.placeholder = '名前を付けて保存…'
+  Object.assign(nameInp.style, { flex: '1', minWidth: '0', background: theme.cell, color: theme.ink,
+    border: `1px solid ${theme.cellEdge}`, borderRadius: '4px', padding: '3px 6px' })
+  const saveBtn = mkBtn('保存', theme.leaf, theme.bg)
+  saveBtn.onclick = () => {
+    const n = (nameInp.value || '').trim(); if (!n) { nameInp.focus(); return }
+    handlers.onSavePreset && handlers.onSavePreset(n); nameInp.value = ''
+  }
+  presetRow.append(nameInp, saveBtn); panel.appendChild(presetRow)
+
+  const presetRow2 = document.createElement('div')
+  Object.assign(presetRow2.style, { display: 'flex', gap: '4px', margin: '4px 0' })
+  const presetSel = document.createElement('select')
+  Object.assign(presetSel.style, { flex: '1', minWidth: '0', background: theme.cell, color: theme.ink,
+    border: `1px solid ${theme.cellEdge}`, borderRadius: '4px', padding: '3px 4px' })
+  const loadBtn = mkBtn('読込', theme.cell, theme.leaf)
+  const delBtn = mkBtn('削除', theme.cell, theme.dim)
+  loadBtn.onclick = () => { if (presetSel.value) handlers.onLoadPreset && handlers.onLoadPreset(presetSel.value) }
+  delBtn.onclick = () => { if (presetSel.value) handlers.onDeletePreset && handlers.onDeletePreset(presetSel.value) }
+  presetRow2.append(presetSel, loadBtn, delBtn); panel.appendChild(presetRow2)
+
+  function mkBtn(label, bg, fg) {
+    const b = document.createElement('button'); b.textContent = label
+    Object.assign(b.style, { background: bg, color: fg, border: `1px solid ${theme.cellEdge}`,
+      borderRadius: '4px', padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' })
+    return b
+  }
 
   h('SOURCE')
   select('mode', 'mode', ['phyllotaxis', 'parenchyma', 'epidermis'])
@@ -183,6 +221,22 @@ export function createControls(handlers) {
         const op = document.createElement('option'); op.value = o.id; op.textContent = o.name
         midiSel.appendChild(op)
       }
+    },
+    // プリセット読込後に全ウィジェットを現在の state に同期
+    refresh() { for (const w of widgets) w.sync() },
+    // 保存済みプリセット名でセレクトを更新
+    setPresetList(names) {
+      const cur = presetSel.value
+      presetSel.innerHTML = ''
+      if (!names.length) {
+        const op = document.createElement('option'); op.value = ''; op.textContent = '— 保存なし —'
+        presetSel.appendChild(op)
+      }
+      for (const n of names) {
+        const op = document.createElement('option'); op.value = n; op.textContent = n
+        presetSel.appendChild(op)
+      }
+      if (names.includes(cur)) presetSel.value = cur
     },
     playBtn,
   }

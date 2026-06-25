@@ -1,4 +1,4 @@
-import { state, setState } from './state.js'
+import { state, setState, subscribe } from './state.js'
 import { buildTissue } from './geometry/tissue.js'
 import { extractFeatures } from './geometry/features.js'
 import { createEngine } from './audio/engine.js'
@@ -8,6 +8,9 @@ import { createScheduler } from './audio/scheduler.js'
 import { createMidi } from './audio/midi.js'
 import { createCanvas } from './ui/canvas.js'
 import { createControls } from './ui/controls.js'
+import {
+  loadLast, saveLast, savePreset, deletePreset, presetNames, listPresets,
+} from './ui/presets.js'
 
 const BOUNDS = [0, 0, 1000, 1000] // 正方フィールド
 
@@ -17,6 +20,10 @@ const startEl = document.getElementById('start')
 let engine = null, breath = null, tide = null, scheduler = null, midi = null
 let canvas = null, controls = null
 let cells = []
+
+// 起動時に「最後の設定」を復元(UI構築前に state へ反映)
+const last = loadLast()
+if (last) Object.assign(state, last)
 
 function rebuildTissue() {
   cells = buildTissue({
@@ -67,6 +74,27 @@ function onChange(path, v) {
 // brightness(0..1) → LPFカットオフ(指数 1.2k〜9kHz)
 function brightToHz(v) { return 1200 * Math.pow(9000 / 1200, Math.max(0, Math.min(1, v))) }
 
+// 現在の state を音声エンジンへ一括反映(プリセット読込時に使う)
+function syncAudioFromState() {
+  if (!engine) return
+  engine.setTone(brightToHz(state.brightness))
+  engine.setReverbWet(state.reverbWet)
+  engine.setDelay(state.delayWet, state.delayFeed)
+  engine.setMaster(state.masterGain)
+  engine.setTempo(state.tempo)
+  breath.setRate(state.breathRate)
+  breath.setDepth(state.breathDepth)
+}
+
+// プリセット/保存設定を適用: state上書き → 幾何再生成 → 音声反映 → UI再同期
+function applySettings(obj) {
+  if (!obj) return
+  Object.assign(state, obj)
+  rebuildTissue()
+  if (engine) { syncAudioFromState(); scheduler.setCells(cells) }
+  controls && controls.refresh()
+}
+
 function start() {
   startEl.style.opacity = '0'
   setTimeout(() => startEl.remove(), 500)
@@ -79,8 +107,11 @@ function start() {
 
 controls = createControls({
   onChange,
-  onRegen: () => { state.seed = (state.seed % 999) + 1; rebuildTissue() },
+  onRegen: () => { state.seed = (state.seed % 999) + 1; rebuildTissue(); controls.refresh() },
   onMidiSelect: id => midi && midi.selectOutput(id),
+  onSavePreset: (name) => { savePreset(name, state); controls.setPresetList(presetNames()) },
+  onLoadPreset: (name) => { applySettings(listPresets()[name]) },
+  onDeletePreset: (name) => { deletePreset(name); controls.setPresetList(presetNames()) },
   onPlay: (btn) => {
     if (!engine) return
     if (state.running) {
@@ -92,6 +123,14 @@ controls = createControls({
       btn.textContent = '❚❚ rest'; btn.style.background = '#cfd8e3'
     }
   },
+})
+controls.setPresetList(presetNames())
+
+// 設定変更を「最後の設定」として自動保存(デバウンス)
+let saveTimer = null
+subscribe(() => {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => saveLast(state), 400)
 })
 
 // 初回ジェスチャで起動（AudioContextの解放）
