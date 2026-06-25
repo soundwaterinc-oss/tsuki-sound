@@ -154,6 +154,12 @@ export function createControls(handlers) {
   slider('root (Hz)', 'root', 110, 330, 1, v => v | 0)
   slider('tempo (BPM)', 'tempo', 50, 72, 1, v => v | 0)
 
+  h('PATTERN 幾何')
+  slider('symmetry (N回対称)', 'vizSymmetry', 1, 12, 1, v => v | 0)
+  toggleBtn('mirror 反転対称', 'vizMirror')
+  slider('lattice 濃さ', 'vizWeb', 0, 0.4, 0.01)
+  slider('spin 自転', 'vizSpin', -0.15, 0.15, 0.005)
+
   h('FX')
   slider('reverb wet', 'reverbWet', 0, 0.9, 0.01)
   slider('delay wet', 'delayWet', 0, 0.6, 0.01)

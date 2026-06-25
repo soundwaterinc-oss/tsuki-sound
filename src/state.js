@@ -54,6 +54,12 @@ export const state = {
   delayFeed: 0.45,
   masterGain: 0.8,
 
+  // PATTERN — 幾何マンダラ描画
+  vizSymmetry: 6,          // N回対称(万華鏡) 1..12
+  vizMirror: true,         // 二面(反転)対称
+  vizWeb: 0.18,            // ラティスの濃さ 0..0.4
+  vizSpin: 0.03,           // 緩慢な自転速度
+
   // MIDI
   midiEnabled: false,
   midiChannel: 1,
