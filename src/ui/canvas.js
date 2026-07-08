@@ -132,21 +132,25 @@ export function createCanvas(container, bounds) {
   }
 
   function drawFlashes(rc, b) {
+    // 加算合成なので、同時発火が多い/対称数が高いほど白飛びしやすい。
+    // 発火数と対称数に応じて減光し、色付きのブルームを保つ。
+    const K = Math.max(1, Math.round(state.vizSymmetry || 6))
+    const dim = 1 / (1 + flashes.size * 0.18 + (K - 1) * 0.05)
     for (const [id, fl] of flashes) {
       const p = rc[id]; if (!p) continue
       const lvl = fl.level
-      const r = (fl.big ? 16 : 9) * dpr * (0.6 + lvl)
+      const r = (fl.big ? 12 : 7) * dpr * (0.6 + lvl)
       // グロー
       const gg = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], r)
-      gg.addColorStop(0, `hsla(${fl.big ? 150 : 175},80%,82%,${0.9 * lvl})`)
-      gg.addColorStop(0.5, `hsla(160,70%,60%,${0.4 * lvl})`)
+      gg.addColorStop(0, `hsla(${fl.big ? 150 : 175},78%,72%,${0.55 * lvl * dim})`)
+      gg.addColorStop(0.5, `hsla(160,70%,55%,${0.24 * lvl * dim})`)
       gg.addColorStop(1, 'hsla(160,70%,50%,0)')
       ctx.fillStyle = gg
       ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 6.283); ctx.fill()
       // セルの輪郭を一瞬光らせる
       const cell = cells[id]
       if (cell && cell.vertices) {
-        ctx.strokeStyle = `hsla(150,80%,85%,${0.7 * lvl})`
+        ctx.strokeStyle = `hsla(150,80%,80%,${0.5 * lvl * dim})`
         ctx.lineWidth = 1.2 * dpr
         ctx.beginPath()
         const Cx = X((bounds[0] + bounds[2]) / 2), Cy = Y((bounds[1] + bounds[3]) / 2)
