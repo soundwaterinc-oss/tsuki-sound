@@ -67,7 +67,7 @@ export function createEngine(st) {
   const whiteBuffer = makeWhiteBuffer(ctx, 2.5)        // 粒子/息(バンドパス源)
 
   const engine = {
-    ctx, busIn, breathGain, lpf, master,
+    ctx, busIn, breathGain, lpf, master, masterOut: master,
     reverbReturn, delaySend, dL, dR, fb,
     sineBuffer, fieldBuffer, whiteBuffer,
     setReverbWet: v => reverbReturn.gain.value = v,

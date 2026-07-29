@@ -9,10 +9,11 @@ import { createMidi } from './audio/midi.js'
 import { createCanvas } from './ui/canvas.js'
 import { createControls } from './ui/controls.js'
 import {
-  loadLast, saveLast, savePreset, deletePreset, presetNames, listPresets,
+  loadLast, saveLast, savePreset, deletePreset, presetNames, listPresets, snapshot,
 } from './ui/presets.js'
 
 const BOUNDS = [0, 0, 1000, 1000] // 正方フィールド
+const FIELD_ON = /[?&#]field/.test(location.href)
 
 const app = document.getElementById('app')
 const startEl = document.getElementById('start')
@@ -20,6 +21,7 @@ const startEl = document.getElementById('start')
 let engine = null, breath = null, tide = null, scheduler = null, midi = null
 let canvas = null, controls = null
 let cells = []
+let bridgeRegistered = false
 
 // 起動時に「最後の設定」を復元(UI構築前に state へ反映)
 const last = loadLast()
@@ -47,6 +49,7 @@ function initAudio() {
   scheduler.setCells(cells)
   engine.setTone(brightToHz(state.brightness)) // brightness を即マスター音色へ
   if (canvas) canvas.setBreath(() => breath.phase())
+  maybeRegisterFieldBridge()
 
   // MIDI 出力一覧
   midi.init().then(list => {
@@ -95,6 +98,77 @@ function applySettings(obj) {
   controls && controls.refresh()
 }
 
+function clamp01(v) { return Math.min(1, Math.max(0, v)) }
+function lerp(a, b, t) { return a + (b - a) * clamp01(t) }
+
+function setRunning(on, btn = controls && controls.playBtn) {
+  if (!engine) return
+  if (on) {
+    if (engine.ctx.state === 'suspended') engine.ctx.resume()
+    scheduler.start()
+    setState({ running: true })
+    if (btn) {
+      btn.textContent = '❚❚ rest'
+      btn.style.background = '#cfd8e3'
+    }
+  } else {
+    scheduler.stop()
+    setState({ running: false })
+    if (btn) {
+      btn.textContent = '▶ BREATHE'
+      btn.style.background = '#9fd6b0'
+    }
+  }
+}
+
+function applyMacro(name, value) {
+  const v = clamp01(value)
+  switch (name) {
+    case 'macro.a':
+      state.breathRate = lerp(0.05, 0.2, v)
+      state.breathDepth = lerp(0.05, 0.6, v)
+      state.tideRate = lerp(0.01, 0.2, v)
+      state.spiralRate = lerp(1, 14, v)
+      break
+    case 'macro.b':
+      state.cellCount = Math.round(lerp(32, 320, v))
+      state.relax = Math.round(lerp(0, 10, v))
+      state.anisotropy = lerp(1, 3, v)
+      state.sizeCut = lerp(0.9, 0.35, v)
+      rebuildTissue()
+      break
+    case 'macro.c':
+      state.brightness = lerp(0.08, 1, v)
+      state.texture = lerp(0.02, 1, v)
+      state.reverbWet = lerp(0.05, 0.8, v)
+      state.delayWet = lerp(0.02, 0.5, v)
+      state.delayFeed = lerp(0.1, 0.7, v)
+      break
+    case 'volume':
+      state.masterGain = lerp(0, 1, v)
+      break
+    default:
+      return
+  }
+  if (engine) syncAudioFromState()
+  if (controls) controls.refresh()
+}
+
+function maybeRegisterFieldBridge() {
+  if (!FIELD_ON || bridgeRegistered || !engine || typeof window.registerElSystemaInstrument !== 'function') return
+  window.registerElSystemaInstrument({
+    id: 'tsuki-sound',
+    audioContext: engine.ctx,
+    outputNode: engine.masterOut,
+    onPlay: () => setRunning(true),
+    onStop: () => setRunning(false),
+    onSetParam: (name, value) => applyMacro(name, value),
+    onLoadPreset: (preset) => applySettings(preset && preset.params ? preset.params : preset),
+    onSnapshot: () => snapshot(state),
+  })
+  bridgeRegistered = true
+}
+
 function start() {
   startEl.style.opacity = '0'
   setTimeout(() => startEl.remove(), 500)
@@ -114,14 +188,7 @@ controls = createControls({
   onDeletePreset: (name) => { deletePreset(name); controls.setPresetList(presetNames()) },
   onPlay: (btn) => {
     if (!engine) return
-    if (state.running) {
-      scheduler.stop(); setState({ running: false })
-      btn.textContent = '▶ BREATHE'; btn.style.background = '#9fd6b0'
-    } else {
-      if (engine.ctx.state === 'suspended') engine.ctx.resume()
-      scheduler.start(); setState({ running: true })
-      btn.textContent = '❚❚ rest'; btn.style.background = '#cfd8e3'
-    }
+    setRunning(!state.running, btn)
   },
 })
 controls.setPresetList(presetNames())
