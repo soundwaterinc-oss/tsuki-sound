@@ -102,9 +102,22 @@
     }
 
     const id = config.id;
+    let stim = null;   // 刺激層（後段で自動アタッチ／attachAudio 時にも）
     const transport = config.transport || Transport.createTransport({ kind: "ws", url: config.wsUrl });
 
-    const observer = makeObserver(config.audioContext || null, config.outputNode || null, config.sharedAnalyser || null);
+    // audio は登録時に無くてもよい（楽器が自分の開始ボタンで ctx を作る型）。後から attachAudio() で差し込む。
+    let observer = makeObserver(config.audioContext || null, config.outputNode || null, config.sharedAnalyser || null);
+    function attachAudio(a) {
+      if (!a || !a.audioContext) return;
+      config.audioContext = a.audioContext;
+      if (a.outputNode) config.outputNode = a.outputNode;
+      if (a.sharedAnalyser) config.sharedAnalyser = a.sharedAnalyser;
+      if (observer) observer.dispose();
+      observer = makeObserver(config.audioContext, config.outputNode || null, config.sharedAnalyser || null);
+      if (!stim && typeof root.registerElSystemaStimulus === "function" && config.outputNode) {
+        try { stim = root.registerElSystemaStimulus({ id: id, audioContext: config.audioContext, outputNode: config.outputNode, transport: transport }); } catch (e) {}
+      }
+    }
 
     // 葉のハンドラは on* と bare 両方受ける。器側はどちらで書いても良い。
     // 例: { play: run, stop: halt } も { onPlay: run, onStop: halt } も通る。
@@ -155,6 +168,8 @@
         low:      +low.toFixed(4),
         high:     +high.toFixed(4),
         everSpoke: everSpoke,
+        ctx: ac ? ac.state : "none",      // 卓が「クリック待ち」を知るため（running / suspended / none）
+        gesture: gestureArmed,            // 卓からの play を user gesture 待ちで保留中
         at: now,
       });
     }
@@ -237,18 +252,97 @@
       transport.send({ t: "err", from: id, of: ofId, msg: String(msg || "error"), at: Shapes.nowMs() });
     }
 
+    // ─ 卓からの play と自動再生制限 ─────────────────────────────
+    // ブラウザは user gesture の無いタブで AudioContext を起こせない（autoplay policy）。
+    // 卓の ▶ が空振りする最大の原因なので、ここで面倒を見る:
+    //   1) ctx が running なら即 play
+    //   2) suspended なら resume() を試す（同一オリジンで既にクリック済みなら通る）
+    //   3) 通らなければ画面に案内を出し、次の pointerdown/keydown で resume→play。卓には pending:"gesture" で返す
+    let gestureArmed = false;
+    let gestureOverlay = null;
+    let gestureHandler = null;
+    function doPlay() { if (typeof cb.play === "function") cb.play(); }
+    function disarmGesture() {
+      if (!gestureArmed) return;
+      gestureArmed = false;
+      if (gestureHandler) {
+        window.removeEventListener("pointerdown", gestureHandler, true);
+        window.removeEventListener("keydown", gestureHandler, true);
+        gestureHandler = null;
+      }
+      if (gestureOverlay && gestureOverlay.parentNode) gestureOverlay.parentNode.removeChild(gestureOverlay);
+      gestureOverlay = null;
+    }
+    function armGesture(ofId) {
+      if (gestureArmed) return;
+      gestureArmed = true;
+      gestureHandler = function () {
+        const ac = config.audioContext;
+        const p = ac && ac.state !== "running" ? ac.resume() : Promise.resolve();
+        Promise.resolve(p).catch(function () {}).then(function () {
+          disarmGesture();
+          doPlay();
+          transport.send({ t: "kotodama", from: id, text: "(卓の ▶ を受けて鳴り始めました)", at: Shapes.nowMs() });
+          tick();   // 卓へ即座に ctx:running を知らせる
+        });
+      };
+      window.addEventListener("pointerdown", gestureHandler, true);
+      window.addEventListener("keydown", gestureHandler, true);
+      try {
+        const d = document.createElement("div");
+        d.setAttribute("data-els-gesture", "1");
+        d.style.cssText = "position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;" +
+          "background:rgba(4,8,10,.72);color:#d0ff5a;font:600 18px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.08em;" +
+          "text-align:center;cursor:pointer;backdrop-filter:blur(2px)";
+        d.innerHTML = '<div style="padding:28px 36px;border:1px solid #d0ff5a;border-radius:8px;background:#04080a">▶ 卓から play が届いています<br>' +
+          '<span style="font-size:13px;color:#9fe8c0">この画面をクリック／キーを押すと鳴り始めます<br>（ブラウザの自動再生制限のため、最初の一度だけ必要）</span></div>';
+        document.body.appendChild(d);
+        gestureOverlay = d;
+      } catch (e) { /* body 未生成等。listener だけで機能する */ }
+    }
+    function playRequested(m) {
+      let ac = config.audioContext;
+      if (!ac) {
+        // 楽器がまだ ctx を持たない（開始ボタンで作る型）: まず play で起動させ、少し待って ctx の状態を見る
+        doPlay();
+        setTimeout(function () {
+          ac = config.audioContext;
+          if (!ac || ac.state === "running") { sendAck(m.id); return; }
+          armGesture(m.id);
+          transport.send({ t: "ack", from: id, of: m.id, ok: true, pending: "gesture", at: Shapes.nowMs() });
+        }, 400);
+        return;
+      }
+      if (ac.state === "running") { doPlay(); sendAck(m.id); return; }
+      let decided = false;
+      function decide(ok) {
+        if (decided) return; decided = true; clearTimeout(timer);
+        if (ok || ac.state === "running") { disarmGesture(); doPlay(); sendAck(m.id); return; }
+        armGesture(m.id);
+        transport.send({ t: "ack", from: id, of: m.id, ok: true, pending: "gesture", at: Shapes.nowMs() });
+      }
+      // resume() は autoplay でブロックされると reject せず pending のまま止まるので、時間で見切る
+      const timer = setTimeout(function () { decide(false); }, 400);
+      let p; try { p = ac.resume(); } catch (e) { p = Promise.reject(e); }
+      Promise.resolve(p).then(function () { decide(ac.state === "running"); }, function () { decide(false); });
+    }
+
     function handleRelay(m) {
       if (m.target !== id && m.target !== "all") return;
       try {
         switch (m.cmd) {
           case "play":
-            if (typeof cb.play === "function") cb.play();
-            break;
+            playRequested(m);
+            return;                       // ack は playRequested が返す（gesture 待ちなら pending 付き）
           case "stop":
+            disarmGesture();
             cancelAllRamps();
+            if (stim) stim.setParam("灯", 0);
             if (typeof cb.stop === "function") cb.stop();
             break;
           case "setParam":
+            // 祭祀語彙の刺激パラメータは刺激層へ、その他は器へ
+            if (stim && /^(灯|脈|息|眠|体|相|律|揺|光|刻|位)/.test(m.name)) { stim.setParam(m.name, m.value); break; }
             if (typeof cb.setParam === "function") cb.setParam(m.name, m.value);
             break;
           case "ramp":
@@ -288,9 +382,22 @@
 
     startKehai();
 
+    // ── 刺激層の自動アタッチ（全楽器共通・足すだけ）──
+    // assr.js が読み込まれ、ctx/outputNode が渡されていれば、既存音源に触れず刺激層を並列に載せる。
+    // これにより「灯/脈/息/眠/体/相/律/揺/光」の刺激パラメータが全楽器で自動的に使えるようになる。
+    if (typeof root.registerElSystemaStimulus === "function" && config.audioContext && config.outputNode) {
+      try {
+        stim = root.registerElSystemaStimulus({
+          id: id, audioContext: config.audioContext, outputNode: config.outputNode, transport: transport,
+        });
+      } catch (e) { /* 刺激層は任意。失敗しても器は通常動作 */ }
+    }
+
     return {
       id,
       transport,
+      attachAudio,
+      get stimulus() { return stim; },
       getKehai: function () {
         const r = observer ? observer.read() : { presence: 0, low: 0, high: 0 };
         return {
@@ -299,6 +406,7 @@
         };
       },
       close: function () {
+        disarmGesture();
         stopKehai();
         cancelAllRamps();
         if (observer) observer.dispose();

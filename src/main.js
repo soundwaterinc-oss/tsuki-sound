@@ -154,13 +154,17 @@ function applyMacro(name, value) {
   if (controls) controls.refresh()
 }
 
+// 卓（EL-SYSTEMA Live）から見えるように読み込み時点で登録し、audio は initAudio 後に attachAudio で差し込む。
+// 卓の ▶ は、開始画面がまだなら start() を代行してから鳴らす（自動再生制限で ctx が起きなければ接続層が案内を出す）。
+let fieldBridge = null
 function maybeRegisterFieldBridge() {
-  if (!FIELD_ON || bridgeRegistered || !engine || typeof window.registerElSystemaInstrument !== 'function') return
-  window.registerElSystemaInstrument({
+  if (!FIELD_ON || typeof window.registerElSystemaInstrument !== 'function') return
+  if (bridgeRegistered) { if (engine && fieldBridge && fieldBridge.attachAudio) fieldBridge.attachAudio({ audioContext: engine.ctx, outputNode: engine.masterOut }); return }
+  fieldBridge = window.registerElSystemaInstrument({
     id: 'tsuki-sound',
-    audioContext: engine.ctx,
-    outputNode: engine.masterOut,
-    onPlay: () => setRunning(true),
+    audioContext: engine ? engine.ctx : undefined,
+    outputNode: engine ? engine.masterOut : undefined,
+    onPlay: () => { if (!engine) start(); setRunning(true) },
     onStop: () => setRunning(false),
     onSetParam: (name, value) => applyMacro(name, value),
     onLoadPreset: (preset) => applySettings(preset && preset.params ? preset.params : preset),
@@ -205,3 +209,6 @@ startEl.addEventListener('click', () => {
   start()
   if (engine && engine.ctx.state === 'suspended') engine.ctx.resume()
 }, { once: true })
+
+// 読み込み時に場へ登録（?field の時だけ有効）。audio は start() 後に差し込まれる
+maybeRegisterFieldBridge()
