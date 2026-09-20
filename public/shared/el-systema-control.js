@@ -259,11 +259,11 @@
     //   2) suspended なら resume() を試す（同一オリジンで既にクリック済みなら通る）
     //   3) 通らなければ画面に案内を出し、次の pointerdown/keydown で resume→play。卓には pending:"gesture" で返す
     let gestureArmed = false;
+    let playedByGesture = false;
     let gestureOverlay = null;
     let gestureHandler = null;
     function doPlay() { if (typeof cb.play === "function") cb.play(); }
     function disarmGesture() {
-      if (!gestureArmed) return;
       gestureArmed = false;
       if (gestureHandler) {
         window.removeEventListener("pointerdown", gestureHandler, true);
@@ -273,14 +273,15 @@
       if (gestureOverlay && gestureOverlay.parentNode) gestureOverlay.parentNode.removeChild(gestureOverlay);
       gestureOverlay = null;
     }
-    function armGesture(ofId) {
-      if (gestureArmed) return;
-      gestureArmed = true;
+    // リスナーは先に張る（重い初期化中のクリックも取りこぼさない）。案内オーバーレイは判定後に出す。
+    function armListener() {
+      if (gestureHandler) return;
       gestureHandler = function () {
         const ac = config.audioContext;
         const p = ac && ac.state !== "running" ? ac.resume() : Promise.resolve();
         Promise.resolve(p).catch(function () {}).then(function () {
           disarmGesture();
+          playedByGesture = true;   // 判定側が二重に play しないよう印を付ける
           doPlay();
           transport.send({ t: "kotodama", from: id, text: "(卓の ▶ を受けて鳴り始めました)", at: Shapes.nowMs() });
           tick();   // 卓へ即座に ctx:running を知らせる
@@ -288,6 +289,11 @@
       };
       window.addEventListener("pointerdown", gestureHandler, true);
       window.addEventListener("keydown", gestureHandler, true);
+    }
+    function armGesture(ofId) {
+      armListener();
+      if (gestureArmed) return;
+      gestureArmed = true;
       try {
         const d = document.createElement("div");
         d.setAttribute("data-els-gesture", "1");
@@ -303,20 +309,31 @@
     function playRequested(m) {
       let ac = config.audioContext;
       if (!ac) {
-        // 楽器がまだ ctx を持たない（開始ボタンで作る型）: まず play で起動させ、少し待って ctx の状態を見る
+        // 楽器がまだ ctx を持たない（開始ボタンで作る型）: まず play で起動させ、ctx が現れるのを待って状態を見る
+        armListener();
         doPlay();
-        setTimeout(function () {
+        const t0 = Shapes.nowMs();
+        playedByGesture = false;
+        (function poll() {
           ac = config.audioContext;
-          if (!ac || ac.state === "running") { sendAck(m.id); return; }
-          armGesture(m.id);
-          transport.send({ t: "ack", from: id, of: m.id, ok: true, pending: "gesture", at: Shapes.nowMs() });
-        }, 400);
+          if (playedByGesture || (ac && ac.state === "running")) { disarmGesture(); sendAck(m.id); return; }
+          if (ac || Shapes.nowMs() - t0 > 2000) {
+            if (!ac) { disarmGesture(); sendAck(m.id); return; }   // ctx を作らない楽器: 判定不能なので ack のみ
+            armGesture(m.id);
+            transport.send({ t: "ack", from: id, of: m.id, ok: true, pending: "gesture", at: Shapes.nowMs() });
+            return;
+          }
+          setTimeout(poll, 100);
+        })();
         return;
       }
       if (ac.state === "running") { doPlay(); sendAck(m.id); return; }
+      armListener();
       let decided = false;
+      playedByGesture = false;
       function decide(ok) {
         if (decided) return; decided = true; clearTimeout(timer);
+        if (playedByGesture) { disarmGesture(); sendAck(m.id); return; }
         if (ok || ac.state === "running") { disarmGesture(); doPlay(); sendAck(m.id); return; }
         armGesture(m.id);
         transport.send({ t: "ack", from: id, of: m.id, ok: true, pending: "gesture", at: Shapes.nowMs() });
